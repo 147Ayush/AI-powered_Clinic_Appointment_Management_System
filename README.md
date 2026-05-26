@@ -182,7 +182,7 @@ Features:
 ```
 AI-Clinic-Appointment-Management-System/
 │
-├── workflows/
+├── workflows_templates/
 │   ├── main_workflow.json
 │   ├── slot_generation_engine.json
 │   ├── patient_appointment_lookup.json
@@ -190,9 +190,12 @@ AI-Clinic-Appointment-Management-System/
 │   ├── doctor_search.json
 │   └── hospital_rag.json
 │
-├── dashboard/
-│
-├── sql/
+├── Admin dashboard/
+|   ├── .env
+│   ├── app.py
+|   ├── requirements.txt
+|
+├── Database Schema & Sample data/
 │   ├── schema.sql
 │   └── sample_data.sql
 │
@@ -204,10 +207,6 @@ AI-Clinic-Appointment-Management-System/
 │   ├── doctor_availability.png
 │   ├── doctor_search.png
 │   └── admin_dashboard.png
-│
-├── prompts/
-│
-├── .env.example
 │
 └── README.md
 ```
@@ -251,7 +250,6 @@ Required integrations:
 Create `.env`:
 
 ```env
-OPENAI_API_KEY=your_openai_api_key
 
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
@@ -259,7 +257,6 @@ MYSQL_USER=root
 MYSQL_PASSWORD=your_password
 MYSQL_DATABASE=clinic_db
 
-GMAIL_USER=your_email@gmail.com
 ```
 
 ### 6. Setup Database
@@ -267,7 +264,7 @@ GMAIL_USER=your_email@gmail.com
 Create database:
 
 ```sql
-CREATE DATABASE clinic_db;
+CREATE DATABASE hospital_ai;
 ```
 
 Import schema files from:
