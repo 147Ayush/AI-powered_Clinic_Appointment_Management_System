@@ -1,0 +1,129 @@
+{
+  "name": "get_doctor_availability",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "doctor_id",
+              "type": "number"
+            },
+            {
+              "name": "appointment_date"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -512,
+        -16
+      ],
+      "id": "f8431426-6385-412d-9a87-c3c6b65a29bb",
+      "name": "When Executed by Another Workflow",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const doctor_id = Number($json.doctor_id);\nconst appointment_date = String($json.appointment_date || \"\").trim();\n\nif (!doctor_id || !appointment_date) {\n  return [\n    {\n      json: {\n        valid: false,\n        error: \"doctor_id and appointment_date are required.\"\n      }\n    }\n  ];\n}\n\nconst match = appointment_date.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);\n\nif (!match) {\n  return [\n    {\n      json: {\n        valid: false,\n        error: \"Invalid appointment_date. Use YYYY-MM-DD format.\"\n      }\n    }\n  ];\n}\n\nconst year = Number(match[1]);\nconst month = Number(match[2]);\nconst day = Number(match[3]);\n\nconst date = new Date(Date.UTC(year, month - 1, day));\n\nconst days = [\n  \"sunday\",\n  \"monday\",\n  \"tuesday\",\n  \"wednesday\",\n  \"thursday\",\n  \"friday\",\n  \"saturday\"\n];\n\nconst day_of_week = days[date.getUTCDay()];\n\nreturn [\n  {\n    json: {\n      valid: true,\n      doctor_id,\n      appointment_date,\n      day_of_week\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        -16
+      ],
+      "id": "cda9ac75-4e68-4592-a1dc-5539dd6efc86",
+      "name": "Prepare Availability Input",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  d.doctor_id,\n  d.doctor_name,\n  d.department,\n  d.specialization,\n  d.consultation_duration,\n  ds.day_of_week,\n  ds.start_time,\n  ds.end_time,\n  ds.is_available\nFROM doctors d\nLEFT JOIN doctor_schedule ds\n  ON d.doctor_id = ds.doctor_id\n  AND ds.day_of_week = '{{ $json.day_of_week }}'\nWHERE d.doctor_id = {{ $json.doctor_id }}\nAND d.is_active = TRUE;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        144,
+        -16
+      ],
+      "id": "6b4743c6-265d-4061-8a0f-9b7c2acc349d",
+      "name": "Get Doctor Schedule MySQL",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "NCxOrgZXhz1Kd8wR",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = items[0]?.json;\n\nif (!row) {\n  return [\n    {\n      json: {\n        available: false,\n        reason: \"Doctor not found or inactive.\",\n        message: \"Doctor not found or inactive.\"\n      }\n    }\n  ];\n}\n\nif (!row.day_of_week || row.is_available === 0 || row.is_available === false) {\n  return [\n    {\n      json: {\n        available: false,\n        doctor_id: row.doctor_id,\n        doctor_name: row.doctor_name,\n        department: row.department,\n        appointment_date: $node[\"Prepare Availability Input\"].json.appointment_date,\n        day_of_week: $node[\"Prepare Availability Input\"].json.day_of_week,\n        reason: \"Doctor is not available on this date.\",\n        message: `${row.doctor_name} is not available on this date.`\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      available: true,\n      doctor_id: row.doctor_id,\n      doctor_name: row.doctor_name,\n      department: row.department,\n      specialization: row.specialization,\n      appointment_date: $node[\"Prepare Availability Input\"].json.appointment_date,\n      day_of_week: row.day_of_week,\n      consultation_duration: row.consultation_duration,\n      available_from: row.start_time,\n      available_to: row.end_time,\n      message: `${row.doctor_name} is available from ${row.start_time} to ${row.end_time}.`\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        -16
+      ],
+      "id": "80149722-1b75-466c-9eed-4de6516dff5b",
+      "name": "Format Doctor Availability",
+      "alwaysOutputData": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Prepare Availability Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Availability Input": {
+      "main": [
+        [
+          {
+            "node": "Get Doctor Schedule MySQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Doctor Schedule MySQL": {
+      "main": [
+        [
+          {
+            "node": "Format Doctor Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "4e2a727b-316d-4fe4-bba0-200502f00d08",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0595145c7d9587a1b1a71e4f98980d5caead4ceedff79f4aa219fadefa3500e9"
+  },
+  "id": "YQOrTTN7o6AaVm4e",
+  "tags": []
+}

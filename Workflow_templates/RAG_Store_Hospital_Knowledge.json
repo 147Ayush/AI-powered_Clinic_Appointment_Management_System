@@ -1,0 +1,175 @@
+{
+  "name": "RAG_Store_Hospital_Knowledge",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -704,
+        -192
+      ],
+      "id": "e87d2f18-7e57-4267-8816-5964dd00e132",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "memoryKey": {
+          "__rl": true,
+          "mode": "list",
+          "value": "vector_store_key"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.3,
+      "position": [
+        -208,
+        -192
+      ],
+      "id": "19df1bc0-f9e0-4c54-8554-56deef60437a",
+      "name": "Simple Vector Store"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -288,
+        0
+      ],
+      "id": "4db2df6f-c19e-442c-b9d1-cbb25e5ab3bc",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "fqySnAnY9VcorKYQ",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "textSplittingMode": "custom",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        -128,
+        0
+      ],
+      "id": "528076d4-3848-49c1-869f-5c1879df7597",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "chunkSize": 800,
+        "chunkOverlap": 100,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        176
+      ],
+      "id": "19700c41-201b-4697-b1ab-83cd7ca7e853",
+      "name": "Recursive Character Text Splitter"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d276f30f-6acb-42dd-bbd6-0fce5b92db5c",
+              "name": "hospital_text",
+              "value": "ABC Hospital  About Hospital: ABC Hospital is a multi-specialty healthcare center providing high-quality medical care with experienced doctors, advanced medical facilities, and patient-friendly services. The hospital focuses on fast appointment scheduling, professional treatment, emergency care, and modern diagnostic support.  Hospital Address: ABC Hospital Road No. 12, Banjara Hills, Hyderabad, Telangana, India  Contact Information: Reception Phone: +91 9876543210 Emergency Helpline: +91 9999999999 Email: support@abchospital.com Website: www.abchospital.com  Hospital Timings: Monday to Saturday: 9:00 AM to 8:00 PM  Sunday: 10:00 AM to 2:00 PM  Emergency services are available 24/7.  Departments Available: - Orthopedics - Pediatrics - Dermatology - Cardiology - Dentistry - Ophthalmology - General Medicine - Neurology - ENT - Gynecology  Orthopedics Department: Treatment for: - Joint pain - Back pain - Fractures - Sports injuries - Knee replacement - Bone disorders  Doctors: - Dr. Amit Verma - Dr. Neeraj Singh  Pediatrics Department: Treatment for: - Child fever - Vaccination - Child infections - Growth monitoring - General pediatric care  Doctors: - Dr. Priya Nair - Dr. Kunal Sharma  Dermatology Department: Treatment for: - Skin allergy - Acne - Hair fall - Fungal infection - Skin rash  Doctors: - Dr. Sneha Kapoor - Dr. Anjali Shah  Cardiology Department: Treatment for: - High blood pressure - Chest pain - Heart disease - ECG and heart checkup  Doctors: - Dr. Rakesh Mehta - Dr. Vivek Rao  Dentistry Department: Treatment for: - Tooth pain - Root canal - Teeth cleaning - Braces - Dental surgery  Doctors: - Dr. Meera - Dr. Ayush  Facilities Available: - 24/7 Emergency Care - ICU Support - Digital X-Ray - MRI Scan - CT Scan - Ultrasound - Pathology Lab - Pharmacy - Ambulance Service - Cashless Insurance Support - Online Appointment Booking - Wheelchair Accessibility - Parking Facility  Consultation Fees: General Consultation: ₹500  Specialist Consultation: ₹700 to ₹1200 depending on department.  Emergency Consultation: ₹1500  Payment Methods: - Cash - UPI - Credit Card - Debit Card - Net Banking - Insurance  Insurance Support: ABC Hospital accepts: - Star Health - HDFC Ergo - ICICI Lombard - Care Health - Niva Bupa - Aditya Birla Health Insurance  Required Documents: Please bring: - Government ID proof - Previous medical reports - Insurance card (if applicable) - Prescription documents  Appointment Rules: - Patients should arrive 15 minutes before appointment time. - Late arrival may require rescheduling. - Appointment cancellation should be done at least 2 hours before scheduled time. - Emergency patients are prioritized.  Emergency Services: Emergency department is open 24 hours a day.  Available emergency support: - Trauma care - Accident support - Cardiac emergency - Pediatric emergency - Ambulance service  Ambulance Contact: +91 9999999999  Visiting Hours: General Ward: 10:00 AM to 12:00 PM 5:00 PM to 7:00 PM  ICU Visiting: Only one visitor allowed at a time.  Pharmacy Timings: 24/7 Pharmacy available inside hospital.  Parking Information: Free parking available for patients and visitors.  Languages Supported: - English - Hindi - Telugu  Online Services: - Online appointment booking - Email confirmation - SMS reminders - Digital prescriptions - Teleconsultation support  COVID Safety Measures: - Sanitization after every consultation - Mask support available - Hand sanitizers installed across hospital - Separate isolation rooms available  Hospital Mission: To provide affordable, accessible, and patient-friendly healthcare with modern medical technology and compassionate care.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -496,
+        -192
+      ],
+      "id": "c4d6f23d-2ae4-458c-bc4a-1f93dd85034c",
+      "name": "hospital_text"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "hospital_text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Simple Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Simple Vector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recursive Character Text Splitter": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Default Data Loader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "hospital_text": {
+      "main": [
+        [
+          {
+            "node": "Simple Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "347d51dd-ad7d-43ce-ae38-90a2467523ba",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0595145c7d9587a1b1a71e4f98980d5caead4ceedff79f4aa219fadefa3500e9"
+  },
+  "id": "44SxUtDPn0EQP2yY",
+  "tags": []
+}

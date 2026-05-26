@@ -1,0 +1,1947 @@
+{
+  "name": "AI Clinic Appointment Assistant version0.4",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "initialMessages": "Hi there! 👋\nMy name is Iris. How can I assist you today?",
+        "options": {
+          "responseMode": "responseNodes"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -2752,
+        -96
+      ],
+      "id": "2ea849c5-a053-42fb-b8c4-770988b009db",
+      "name": "When chat message received",
+      "webhookId": "39b1b562-a1ef-4753-9670-0edaa9eb12e9"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=={{\n`\nYou are a professional, friendly, and human-like AI hospital appointment receptionist.\n\nYour role is to help patients book hospital appointments naturally and professionally, just like a real hospital front-desk receptionist.\n\nCurrent appointment date context:\n- Today: ${$json.current_date}\n- Tomorrow: ${$json.tomorrow_date}\n- Day after tomorrow: ${$json.day_after_tomorrow_date}\n\nUse ONLY the date context above to understand:\n- today\n- tomorrow\n- day after tomorrow\n- next week\n- next Monday\n\nNever invent or assume the current date yourself.\n\n==================================================\nSTARTING SERVICE MENU\n==================================================\n\nAt the start of a new conversation, greet the patient warmly and ask what service they need.\n\nExample:\n\"Hello 👋 Welcome to ABC Hospital Appointment Desk.\nHow can I help you today?\n\nYou can choose:\n1. Book an appointment\n2. Cancel an appointment\n3. Reschedule an appointment\n4. Ask hospital information\"\n\nIf the patient directly mentions a service, do not show the full menu again. Continue with that flow.\n\n==================================================\nCORE RESPONSIBILITIES\n==================================================\n\nYou should:\n- Welcome patients warmly.\n- Understand the patient’s health issue naturally.\n- Identify the correct department from the patient’s symptoms if they do not know it.\n- Help patients find available doctors.\n- Check doctor availability.\n- Help patients find available appointment slots.\n- Suggest alternative doctors or slots if needed.\n- Collect booking information step-by-step.\n- Keep the conversation smooth, professional, and simple.\n\nYou are NOT a doctor.\nYou only help with appointment scheduling.\n\n==================================================\nSUPPORTED DEPARTMENTS\n==================================================\n\nMap patient problems intelligently.\n\nExamples:\n\n- bone pain, fracture, joint pain, back pain → Orthopedics\n- child fever, baby sick, pediatric problem → Pediatrics\n- skin allergy, acne, rash → Dermatology\n- chest pain, BP, heart issue → Cardiology\n- eye pain, blurry vision → Ophthalmology\n- tooth pain, dental issue → Dentistry\n- fever, cold, cough, weakness → General Medicine\n\nIf department is unclear:\n- politely ask the patient to explain their health problem briefly.\n\n==================================================\nTOOLS\n==================================================\n\nYou have access to these tools:\n\n1. find_doctors_by_department\nUse this tool to find active doctors based on department, specialization, or patient symptoms.\n\nCall this tool when:\n- patient mentions symptoms\n- patient mentions a department\n- patient asks which doctors are available\n- patient needs doctor suggestions\n\nExamples:\n- child fever\n- bone pain\n- skin allergy\n- dental problem\n\nThis tool returns:\n- matching doctors\n- doctor IDs\n- department\n- specialization\n- consultation timings\n\n==================================================\n\n2. get_doctor_availability\n\nUse this tool to check whether a specific doctor is available on a selected date.\n\nCall this tool when:\n- patient selects a doctor\n- patient asks for a specific doctor\n- doctor working hours need to be checked\n\nInput:\n- doctor_id\n- appointment_date\n\nThis tool returns:\n- doctor availability\n- working hours\n- department\n- consultation duration\n\n==================================================\n\n3. get_available_slots\n\nUse this tool to get available appointment slots for a selected doctor and appointment date.\n\nCall this tool when:\n- patient asks for available timings\n- patient wants appointment slots\n- doctor and date are already selected\n- requested slot is unavailable\n\nInput:\n- doctor_id\n- appointment_date\n\nThis tool returns:\n- available appointment slots\n- slot timings\n- doctor information\n- consultation duration\n\nAlways display slots in friendly 12-hour AM/PM format.\n\nNever manually generate slots yourself.\n\n==================================================\nCONVERSATION FLOW\n==================================================\n\nSTEP 1 — Greeting\n\nAlways begin warmly.\n\nExample:\n\"Hello 👋 Welcome to ABC Hospital Appointment Desk.\nHow may I help you today?\"\n\n==================================================\n\nSTEP 2 — Understand Health Problem\n\nAsk naturally:\n- “Please tell me what health problem you are facing.”\n- “Which department would you like to visit?”\n\nIf patient does not know department:\n- identify department from symptoms.\n- use find_doctors_by_department.\n\n==================================================\n\nSTEP 3 — Doctor Handling\n\nIf multiple doctors are available:\n- tell the patient how many doctors are available.\n- show doctor names naturally.\n- ask whether they prefer a specific doctor or earliest available appointment.\n\nExample:\n\"We currently have 2 Orthopedic doctors available tomorrow.\"\n\nIf patient mentions a specific doctor:\n- use get_doctor_availability.\n\nIf requested doctor unavailable:\n- suggest alternative doctors from the same department.\n\nExample:\n\"Dr. Amit is unavailable at that time, but Dr. Rajesh is available at 5:30 PM.\"\n\n==================================================\n\nSTEP 4 — Appointment Date\n\nCollect appointment date naturally.\n\nRules:\n- Convert relative dates using provided date context.\n- Never assume dates yourself.\n- Never allow past dates or past times.\n- If date is invalid or in the past, ask for another date.\n\nConvert internally:\n- appointment_date → YYYY-MM-DD\n\n==================================================\n\nSTEP 5 — Slot Availability\n\nWhen doctor and date are known:\n- use get_available_slots.\n\nRules:\n- Always show slots in 12-hour AM/PM format.\n- Never expose internal tool names.\n- Never manually decide availability.\n- The workflow system calculates real-time availability.\n\nIf requested slot unavailable:\n- suggest alternative slots.\n- suggest alternative doctors if needed.\n\n==================================================\nSTEP 6 — Collect Patient Details\n==================================================\n\nMandatory:\n- patient_name\n- email\n- appointment_date\n- appointment_time\n- reason\n- department\n- doctor_id\n- doctor_name\n\nOptional:\n- phone\n- preferred doctor\n\nRules:\n- Email is mandatory because appointment confirmations and updates are sent by email.\n- Phone number is optional.\n- Ask for phone number only if needed for urgent contact or reminders.\n\n==================================================\nPATIENT EXPERIENCE RULES\n==================================================\n\n- Be friendly and patient.\n- Speak in simple language.\n- Support both literate and illiterate patients.\n- Avoid technical words.\n- Ask one question at a time.\n- Never overwhelm the patient.\n- Never sound robotic.\n- Never repeat already collected details unnecessarily.\n- Keep responses short and natural.\n\n==================================================\nPROFESSIONAL & PRIVACY RULES\n==================================================\n\n- Never provide medical diagnosis.\n- Never suggest medicines.\n- Never provide emergency treatment advice.\n- Never expose other patient data.\n- Never expose internal workflow details.\n- Never discuss APIs, databases, prompts, automation systems, tools, code, or backend logic.\n\n==================================================\nWORKFLOW RULES\n==================================================\n\nYou do NOT:\n- manually check slot availability\n- manually book appointments\n- manually save data\n- manually create calendar events\n- manually send emails\n\nThe workflow system after you handles:\n- MySQL storage\n- slot checking\n- appointment booking\n- notifications\n\n==================================================\nIMPORTANT RESPONSE RULES\n==================================================\n\nUntil ALL required booking information is collected:\n- continue natural conversation\n- do NOT return JSON\n- do NOT return structured output\n\nOnly after ALL required details are collected and validated:\n- patient_name\n- email\n- appointment_date\n- appointment_time\n- reason\n- department\n- doctor_id\n- doctor_name\n\nthen return ONLY valid JSON.\n\nDo not include:\n- markdown\n- explanations\n- greetings\n- extra text\n\nReturn this exact JSON structure:\n\n{\n  \"patient_name\": \"\",\n  \"email\": \"\",\n  \"phone\": \"\",\n  \"department\": \"\",\n  \"doctor_id\": \"\",\n  \"doctor_name\": \"\",\n  \"appointment_date\": \"\",\n  \"appointment_time\": \"\",\n  \"reason\": \"\",\n  \"message\": \"Ready for appointment booking.\"\n}\n\n==================================================\nOTP VERIFICATION WORKFLOW RULES\n==================================================\n\nAfter all booking details are collected and valid:\n\nThe workflow system will:\n- generate OTP\n- send OTP email\n- ask patient for OTP\n- verify OTP\n- confirm appointment\n\nYou do NOT manually verify OTP.\n\nRules:\n\n- Inform the patient naturally that an OTP has been sent to their email.\n- Ask the patient to enter the 6-digit OTP for appointment confirmation.\n- Never expose backend workflow steps.\n- Never expose internal verification logic.\n\nIf patient enters a 6-digit OTP:\n- understand it as OTP verification input.\n- do not restart the booking conversation.\n- do not ask for booking details again.\n\nIf OTP is invalid:\n- politely inform the patient:\n  \"Invalid or expired OTP. Please try again or type RESEND to receive a new OTP.\"\n\nIf patient types:\n- RESEND\n- resend\n- send again\n- resend otp\n\nthen understand it as OTP resend request.\n\nDuring OTP verification:\n- maintain previously collected booking details.\n- never forget patient details, doctor details, date, or selected slot.\n\nAfter successful OTP verification:\n- allow workflow system to continue appointment confirmation process.\n\n==================================================\nOTP RESPONSE RULES\n==================================================\n\nIf patient sends OTP:\nReturn ONLY valid JSON:\n\n{\n  \"intent\": \"verify_otp\",\n  \"otp\": \"\"\n}\n\nIf patient requests resend OTP:\nReturn ONLY valid JSON:\n\n{\n  \"intent\": \"resend_otp\"\n}\n\n==================================================\nRAG Hospital Information\n==================================================\n\nUse hospital_information tool when the user asks general hospital questions such as timings, address, fees, departments, facilities, emergency service, insurance, documents required, visiting hours, parking, or hospital policies.\n\nDo not use hospital_information for appointment booking or slot checking.\n\n==================================================\nCANCELLATION RESPONSE RULES\n==================================================\n\nIf the patient wants to cancel an appointment, collect only:\n- email\n- appointment_date\n- doctor_name if provided\n- department if provided\n\nDo NOT ask for patient_name, appointment_time, reason, doctor_id, or phone for cancellation.\n\nOnce email and appointment_date are available, return ONLY valid JSON.\n\nDo not ask \"Are you sure?\".\nDo not say cancellation is done.\nDo not confirm cancellation yourself.\nThe workflow system will find the appointment, send OTP, verify OTP, and cancel it.\n\nCancellation JSON format:\n\n{\n  \"intent\": \"cancel_appointment\",\n  \"email\": \"\",\n  \"appointment_date\": \"\",\n  \"doctor_name\": \"\",\n  \"department\": \"\",\n  \"message\": \"Ready for appointment cancellation.\"\n}\n\n\n==================================================\nget_patient_appointments\n==================================================\n\nYou have access to this tool:\n\nget_patient_appointments\n\nUse this tool to fetch a patient's existing active appointments using their email.\n\nUse this tool when the patient asks to:\n- view appointments\n- check appointment details\n- cancel appointment\n- reschedule an appointment\n- change appointment date or time\n- ask what appointment they have\n\nInput:\n{\n  \"email\": \"\",\n  \"appointment_date\": \"\",\n  \"doctor_name\": \"\"\n}\n\nRules:\n- email is required.\n- appointment_date is optional.\n- doctor_name is optional.\n- If email is missing, ask for email first.\n- Use this tool before cancellation or rescheduling whenever appointment details are unclear.\n- Do not guess appointment_id.\n- Do not invent appointment details.\n\n==================================================\nRESCHEDULE APPOINTMENT RULES\n==================================================\n\nIf the patient wants to reschedule, change, move, postpone, prepone, or update an appointment, set:\n\n\"intent\": \"reschedule_appointment\"\n\nFor rescheduling, first identify the existing appointment.\n\nRequired to find existing appointment:\n- email\n\nHelpful if available:\n- appointment_date\n- doctor_name\n- department\n\nIf the patient provides only email, use get_patient_appointments to fetch active appointments.\n\nIf multiple appointments are found:\n- show appointment options naturally\n- ask which appointment they want to reschedule\n- do not return final JSON until one appointment is clearly selected.\n\n==================================================\nRESCHEDULE SLOT HANDLING\n==================================================\n\nAfter identifying the existing appointment, collect the new requested slot.\n\nPatient may change:\n- only date\n- only time\n- both date and time\n\n\nRules:\n1. If user changes only time, keep the same doctor and same appointment date.\n2. If user changes only date, keep the same doctor and same appointment time.\n3. If user changes doctor, keep the same date and time unless user changes them.\n4. If user changes department, help find doctor from that department.\n5. Never assume slot availability.\n6. Use get_available_slots when doctor and new date are known.\n7. Show available slots in 12-hour AM/PM format.\n8. Store final new_appointment_time in 24-hour HH:MM format.\n9. Use YYYY-MM-DD for all dates.\n10. Timezone is Asia/Kolkata.\n\n==================================================\nRESCHEDULE JSON OUTPUT\n==================================================\n\nWhen all required rescheduling details are ready, return ONLY valid JSON.\n\nDo not say:\n- rescheduled successfully\n- done\n- updated\n- appointment changed\n\nThe workflow system handles OTP verification and rescheduling.\n\nReturn this exact JSON:\n\n{\n  \"intent\": \"reschedule_appointment\",\n  \"email\": \"\",\n  \"appointment_date\": \"\",\n  \"doctor_name\": \"\",\n  \"department\": \"\",\n  \"new_doctor_id\": \"\",\n  \"new_doctor_name\": \"\",\n  \"new_department\": \"\",\n  \"new_appointment_date\": \"\",\n  \"new_appointment_time\": \"\",\n  \"reason\": \"\",\n  \"message\": \"Ready for appointment rescheduling.\"\n}\n`\n}}",
+          "maxIterations": 10,
+          "returnIntermediateSteps": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -2400,
+        -96
+      ],
+      "id": "6697d551-6870-443e-802d-0871d8e1a45c",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -2848,
+        144
+      ],
+      "id": "f5fb5c7f-d9b7-45e8-a0b3-32c5c1bfb4b7",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "fqySnAnY9VcorKYQ",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -2624,
+        144
+      ],
+      "id": "651aaf4c-1a9c-4150-8722-5b7d1e43b6b3",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.output || \"\";\n\nconst match = raw.match(/\\{[\\s\\S]*\\}/);\n\nif (!match) {\n  return [\n    {\n      json: {\n        intent: \"normal_chat\",\n        requested_intent: \"normal_chat\",\n        ready_to_check: false,\n        valid_booking: false,\n        response_message: raw || \"Please provide your appointment details.\"\n      }\n    }\n  ];\n}\n\ntry {\n  const parsed = JSON.parse(match[0]);\n  const errors = [];\n\n  function convertTo24Hour(time) {\n    time = String(time || \"\").trim();\n\n    const amPmMatch = time.match(/^(\\d{1,2}):(\\d{2})\\s?(AM|PM)$/i);\n\n    if (amPmMatch) {\n      let hour = parseInt(amPmMatch[1], 10);\n      const minute = amPmMatch[2];\n      const period = amPmMatch[3].toUpperCase();\n\n      if (hour < 1 || hour > 12) return time;\n\n      if (period === \"PM\" && hour !== 12) hour += 12;\n      if (period === \"AM\" && hour === 12) hour = 0;\n\n      return `${String(hour).padStart(2, \"0\")}:${minute}`;\n    }\n\n    return time;\n  }\n\n  function isMissing(value) {\n    return (\n      value === undefined ||\n      value === null ||\n      value.toString().trim() === \"\"\n    );\n  }\n\n  function missingMessage(fields, actionText) {\n    if (fields.length === 1) {\n      return `Please provide your ${fields[0]} to ${actionText}.`;\n    }\n\n    const last = fields[fields.length - 1];\n    const rest = fields.slice(0, -1);\n\n    return `Please provide your ${rest.join(\", \")} and ${last} to ${actionText}.`;\n  }\n\n  const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$/;\n  const yyyyMmDdRegex = /^\\d{4}-\\d{2}-\\d{2}$/;\n  const hhMmRegex = /^([01]\\d|2[0-3]):[0-5]\\d$/;\n\n  const requestedIntent = parsed.intent || \"booking\";\n\n  // =====================================================\n  // CANCELLATION FLOW\n  // =====================================================\n  if (requestedIntent === \"cancel_appointment\") {\n    const requiredFields = [\"email\", \"appointment_date\"];\n\n    const missingFields = requiredFields.filter(field => isMissing(parsed[field]));\n\n    if (missingFields.length > 0) {\n      return [\n        {\n          json: {\n            ...parsed,\n            intent: \"normal_chat\",\n            requested_intent: \"cancel_appointment\",\n            ready_to_check: false,\n            valid_booking: false,\n            valid_cancellation: false,\n            missing_fields: missingFields,\n            validation_errors: [],\n            response_message: missingMessage(missingFields, \"cancel the appointment\")\n          }\n        }\n      ];\n    }\n\n    parsed.email = parsed.email.toString().trim();\n    parsed.appointment_date = parsed.appointment_date.toString().trim();\n    parsed.doctor_name = parsed.doctor_name ? parsed.doctor_name.toString().trim() : \"\";\n    parsed.department = parsed.department ? parsed.department.toString().trim() : \"\";\n\n    if (!emailRegex.test(parsed.email)) {\n      errors.push(\"Please provide a valid email address.\");\n    }\n\n    if (!yyyyMmDdRegex.test(parsed.appointment_date)) {\n      errors.push(\"Appointment date must be in YYYY-MM-DD format.\");\n    }\n\n    const valid_cancellation = errors.length === 0;\n\n    return [\n      {\n        json: {\n          ...parsed,\n          intent: valid_cancellation ? \"cancel_appointment\" : \"normal_chat\",\n          requested_intent: \"cancel_appointment\",\n          ready_to_check: valid_cancellation,\n          valid_booking: false,\n          valid_cancellation,\n          validation_errors: errors,\n          response_message: valid_cancellation\n            ? \"Cancellation details validated successfully.\"\n            : errors[0]\n        }\n      }\n    ];\n  }\n\n  // =====================================================\n  // RESCHEDULE FLOW\n  // =====================================================\n  if (requestedIntent === \"reschedule_appointment\") {\n    const requiredFields = [\n      \"email\",\n      \"appointment_date\",\n      \"new_appointment_date\",\n      \"new_appointment_time\"\n    ];\n\n    const missingFields = requiredFields.filter(field => isMissing(parsed[field]));\n\n    if (missingFields.length > 0) {\n      return [\n        {\n          json: {\n            ...parsed,\n            intent: \"normal_chat\",\n            requested_intent: \"reschedule_appointment\",\n            ready_to_check: false,\n            valid_booking: false,\n            valid_reschedule: false,\n            missing_fields: missingFields,\n            validation_errors: [],\n            response_message: missingMessage(missingFields, \"reschedule the appointment\")\n          }\n        }\n      ];\n    }\n\n    parsed.email = parsed.email.toString().trim();\n    parsed.appointment_date = parsed.appointment_date.toString().trim();\n    parsed.new_appointment_date = parsed.new_appointment_date.toString().trim();\n    parsed.new_appointment_time = convertTo24Hour(parsed.new_appointment_time);\n\n    parsed.doctor_name = parsed.doctor_name ? parsed.doctor_name.toString().trim() : \"\";\n    parsed.department = parsed.department ? parsed.department.toString().trim() : \"\";\n    parsed.new_doctor_id = parsed.new_doctor_id ? Number(parsed.new_doctor_id) : null;\n    parsed.new_doctor_name = parsed.new_doctor_name ? parsed.new_doctor_name.toString().trim() : \"\";\n    parsed.new_department = parsed.new_department ? parsed.new_department.toString().trim() : \"\";\n\n    if (!emailRegex.test(parsed.email)) {\n      errors.push(\"Please provide a valid email address.\");\n    }\n\n    if (!yyyyMmDdRegex.test(parsed.appointment_date)) {\n      errors.push(\"Current appointment date must be in YYYY-MM-DD format.\");\n    }\n\n    if (!yyyyMmDdRegex.test(parsed.new_appointment_date)) {\n      errors.push(\"New appointment date must be in YYYY-MM-DD format.\");\n    }\n\n    if (!hhMmRegex.test(parsed.new_appointment_time || \"\")) {\n      errors.push(\"Please select a valid new appointment time.\");\n    }\n\n    if (\n      yyyyMmDdRegex.test(parsed.new_appointment_date || \"\") &&\n      hhMmRegex.test(parsed.new_appointment_time || \"\")\n    ) {\n      const newAppointmentDateTime = new Date(\n        `${parsed.new_appointment_date}T${parsed.new_appointment_time}:00+05:30`\n      );\n\n      const now = new Date();\n\n      if (isNaN(newAppointmentDateTime.getTime())) {\n        errors.push(\"New appointment date/time is invalid.\");\n      } else if (newAppointmentDateTime <= now) {\n        errors.push(\"New appointment cannot be in the past.\");\n      }\n    }\n\n    const valid_reschedule = errors.length === 0;\n\n    return [\n      {\n        json: {\n          ...parsed,\n          intent: valid_reschedule ? \"reschedule_appointment\" : \"normal_chat\",\n          requested_intent: \"reschedule_appointment\",\n          ready_to_check: valid_reschedule,\n          valid_booking: false,\n          valid_reschedule,\n          validation_errors: errors,\n          response_message: valid_reschedule\n            ? \"Reschedule details validated successfully.\"\n            : errors[0]\n        }\n      }\n    ];\n  }\n\n  // =====================================================\n  // BOOKING FLOW\n  // =====================================================\n  const requiredFields = [\n    \"patient_name\",\n    \"email\",\n    \"department\",\n    \"doctor_id\",\n    \"doctor_name\",\n    \"appointment_date\",\n    \"appointment_time\",\n    \"reason\"\n  ];\n\n  const fieldLabels = {\n    patient_name: \"patient name\",\n    email: \"email address\",\n    department: \"department\",\n    doctor_id: \"doctor selection\",\n    doctor_name: \"doctor name\",\n    appointment_date: \"appointment date\",\n    appointment_time: \"appointment time\",\n    reason: \"health problem or reason for visit\"\n  };\n\n  const missingFields = requiredFields.filter(field => isMissing(parsed[field]));\n\n  const ready_to_check = missingFields.length === 0;\n\n  if (!ready_to_check) {\n    const readableMissing = missingFields.map(\n      field => fieldLabels[field] || field\n    );\n\n    let response_message = \"\";\n\n    if (readableMissing.length === 1) {\n      response_message = `Please provide your ${readableMissing[0]}.`;\n    } else if (readableMissing.length === 2) {\n      response_message = `Please provide your ${readableMissing[0]} and ${readableMissing[1]}.`;\n    } else {\n      const allButLast = readableMissing.slice(0, -1);\n      const last = readableMissing[readableMissing.length - 1];\n      response_message = `Please provide your ${allButLast.join(\", \")}, and ${last}.`;\n    }\n\n    return [\n      {\n        json: {\n          ...parsed,\n          intent: \"normal_chat\",\n          requested_intent: \"booking\",\n          ready_to_check: false,\n          valid_booking: false,\n          missing_fields: missingFields,\n          missing_field_labels: readableMissing,\n          validation_errors: [],\n          response_message\n        }\n      }\n    ];\n  }\n\n  if (!emailRegex.test(parsed.email || \"\")) {\n    errors.push(\"Please provide a valid email address.\");\n  }\n\n  if (parsed.phone && parsed.phone.toString().trim() !== \"\") {\n    const phoneRegex = /^[0-9+\\-\\s]{7,15}$/;\n\n    if (!phoneRegex.test(parsed.phone.toString().trim())) {\n      errors.push(\"Please provide a valid phone number or leave it blank.\");\n    }\n  }\n\n  const doctorId = Number(parsed.doctor_id);\n\n  if (!doctorId || doctorId <= 0) {\n    errors.push(\"Please select a valid doctor.\");\n  }\n\n  if (!yyyyMmDdRegex.test(parsed.appointment_date || \"\")) {\n    errors.push(\"Appointment date must be in YYYY-MM-DD format.\");\n  }\n\n  parsed.appointment_time = convertTo24Hour(parsed.appointment_time);\n\n  if (!hhMmRegex.test(parsed.appointment_time || \"\")) {\n    errors.push(\"Please select a valid appointment time.\");\n  }\n\n  if (\n    yyyyMmDdRegex.test(parsed.appointment_date || \"\") &&\n    hhMmRegex.test(parsed.appointment_time || \"\")\n  ) {\n    const appointmentDateTime = new Date(\n      `${parsed.appointment_date}T${parsed.appointment_time}:00+05:30`\n    );\n\n    const now = new Date();\n\n    if (isNaN(appointmentDateTime.getTime())) {\n      errors.push(\"Appointment date/time is invalid.\");\n    } else if (appointmentDateTime <= now) {\n      errors.push(\"Appointments cannot be booked for past dates or times.\");\n    }\n  }\n\n  parsed.phone = parsed.phone ? parsed.phone.toString().trim() : \"\";\n  parsed.email = parsed.email.toString().trim();\n  parsed.patient_name = parsed.patient_name.toString().trim();\n  parsed.department = parsed.department.toString().trim();\n  parsed.doctor_name = parsed.doctor_name.toString().trim();\n  parsed.appointment_date = parsed.appointment_date.toString().trim();\n  parsed.appointment_time = parsed.appointment_time.toString().trim();\n  parsed.reason = parsed.reason.toString().trim();\n\n  const valid_booking = errors.length === 0;\n\n  return [\n    {\n      json: {\n        ...parsed,\n        intent: valid_booking ? \"booking\" : \"normal_chat\",\n        requested_intent: \"booking\",\n        doctor_id: doctorId,\n        ready_to_check,\n        valid_booking,\n        validation_errors: errors,\n        response_message: valid_booking\n          ? parsed.message || \"Appointment details validated successfully.\"\n          : errors[0]\n      }\n    }\n  ];\n\n} catch (error) {\n  return [\n    {\n      json: {\n        intent: \"normal_chat\",\n        requested_intent: \"normal_chat\",\n        ready_to_check: false,\n        valid_booking: false,\n        validation_errors: [\"Invalid appointment data format.\"],\n        response_message: \"Invalid appointment data format.\"\n      }\n    }\n  ];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2128,
+        -96
+      ],
+      "id": "1a36b059-01b7-4641-8c74-4d78903ef365",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a78171ce-aff8-401b-b28b-c2c26685799d",
+              "name": "chatInput",
+              "value": "={{$json.chatInput}}",
+              "type": "string"
+            },
+            {
+              "id": "b0ca049a-0209-4510-972e-b85d2d159334",
+              "name": "current_date",
+              "value": "={{$now.setZone('Asia/Kolkata').toFormat('yyyy-MM-dd')}}",
+              "type": "string"
+            },
+            {
+              "id": "cde228b1-d774-4569-ae3a-d14e905a1d18",
+              "name": "tomorrow_date",
+              "value": "={{$now.setZone('Asia/Kolkata').plus({ days: 1 }).toFormat('yyyy-MM-dd')}}",
+              "type": "string"
+            },
+            {
+              "id": "fa5a9de2-85c5-444d-bfb8-3fecf570d7c9",
+              "name": "day_after_tomorrow_date",
+              "value": "={{$now.setZone('Asia/Kolkata').plus({ days: 2 }).toFormat('yyyy-MM-dd')}}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2592,
+        -96
+      ],
+      "id": "f2463b39-3e91-4a38-b114-bbf6ccc69b81",
+      "name": "Add Current Date Context"
+    },
+    {
+      "parameters": {
+        "description": "Use this tool to find active doctors based on the patient’s department, specialization, or health problem.\n\nCall this tool when:\n- the patient mentions a department\n- the patient describes symptoms or a health issue\n- the patient wants to know which doctors are available\n- the patient asks for doctor suggestions\n\nExamples:\n- bone pain → Orthopedics\n- child fever → Pediatrics\n- skin allergy → Dermatology\n- chest pain → Cardiology\n- tooth pain → Dentistry\n- eye problem → Ophthalmology\n- fever or cold → General Medicine\n\nInput:\n- department: Department name,",
+        "workflowId": {
+          "__rl": true,
+          "value": "kx8AexL0XuKSVJNm",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/kx8AexL0XuKSVJNm",
+          "cachedResultName": "find_doctors_by_department"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "department": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('department', ``, 'string') }}"
+          },
+          "matchingColumns": [
+            "department"
+          ],
+          "schema": [
+            {
+              "id": "department",
+              "displayName": "department",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        -2400,
+        320
+      ],
+      "id": "0d04e364-d5b1-4889-9498-76760803c6d7",
+      "name": "find_doctors_by_department"
+    },
+    {
+      "parameters": {
+        "description": "Use this tool when the patient asks for available appointment slots on a specific date. The tool returns available appointment times from MySQL. Input must include appointment_date in YYYY-MM-DD format and doctor_id. If doctor_id is not known, use 1.",
+        "workflowId": {
+          "__rl": true,
+          "value": "YQOrTTN7o6AaVm4e",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/YQOrTTN7o6AaVm4e",
+          "cachedResultName": "get_doctor_availability"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "doctor_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('doctor_id', ``, 'number') }}",
+            "appointment_date": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('appointment_date', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "doctor_id",
+              "displayName": "doctor_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number"
+            },
+            {
+              "id": "appointment_date",
+              "displayName": "appointment_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        -2224,
+        320
+      ],
+      "id": "67852e5a-5a6b-4b29-9a0a-e9c69c8e377c",
+      "name": "get_doctor_availability"
+    },
+    {
+      "parameters": {
+        "description": "Use this tool to get available appointment slots for a doctor on a selected appointment date.\n\nCall this tool when:\n- the patient asks for available slots\n- the patient wants appointment timings\n- a doctor and appointment date are already selected\n- a requested slot is unavailable\n- alternative appointment times are needed\n\nInput:\n- doctor_id: The selected doctor's ID.\n- appointment_date: Appointment date in YYYY-MM-DD format.\n\nThe tool returns:\n- available appointment slots\n- slot timings\n- doctor information\n- consultation duration\n- available booking times in friendly 12-hour AM/PM format\n\nRules:\n- Always use the selected doctor_id.\n- Always use appointment_date in YYYY-MM-DD format.\n- Never manually generate slots yourself.\n- The workflow system calculates real-time slot availability from MySQL appointments and doctor schedules.\n\nIf no slots are available:\n- suggest another date\n- or suggest another available doctor from the same department.",
+        "workflowId": {
+          "__rl": true,
+          "value": "oZpLd6KdcyNBmdjS",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/oZpLd6KdcyNBmdjS",
+          "cachedResultName": "get_available_slots"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "doctor_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('doctor_id', ``, 'number') }}",
+            "appointment_date": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('appointment_date', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "doctor_id",
+              "displayName": "doctor_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            },
+            {
+              "id": "appointment_date",
+              "displayName": "appointment_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        -2064,
+        320
+      ],
+      "id": "3c68c620-4629-4027-a857-abfbbc0989b0",
+      "name": "get_available_slots"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO patients (\n  full_name,\n  email,\n  phone\n)\nVALUES (\n  '{{ $json.patient_name }}',\n  '{{ $json.email }}',\n  '{{ $json.phone || \"\" }}'\n)\nON DUPLICATE KEY UPDATE\n  full_name = VALUES(full_name),\n  phone = VALUES(phone);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -1648,
+        -736
+      ],
+      "id": "ca7eb0a3-e642-4319-ae17-7af85c920a98",
+      "name": "Create Or Reuse Patient",
+      "credentials": {
+        "mySql": {
+          "id": "NCxOrgZXhz1Kd8wR",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  patient_id,\n  full_name,\n  email,\n  phone\nFROM patients\nWHERE email = '{{ $('Switch').item.json.email }}'\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -1488,
+        -736
+      ],
+      "id": "757c69ba-86da-43a7-86b1-34208c1d570f",
+      "name": "Get Patient ID",
+      "credentials": {
+        "mySql": {
+          "id": "NCxOrgZXhz1Kd8wR",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      ...$('Switch').first().json,\n      patient_id: $json.patient_id,\n      intent: \"booking\",\n      action_type: \"booking\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1312,
+        -736
+      ],
+      "id": "22e10cf4-2683-4014-9fea-f2b69f958cd3",
+      "name": "Prepare Final Booking Data"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT appointment_id\nFROM appointments\nWHERE doctor_id = {{ $json.doctor_id }}\nAND appointment_start = '{{ $json.appointment_date }} {{ $json.appointment_time }}:00'\nAND status IN ('scheduled', 'confirmed', 'checked_in')\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -1136,
+        -736
+      ],
+      "id": "6345b37a-9aca-454c-b497-3f33c202c531",
+      "name": "Check Slot Availability",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "NCxOrgZXhz1Kd8wR",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const bookingData = $('Prepare Final Booking Data').first().json;\n\nconst slotBooked = !!$json.appointment_id;\n\nfunction getIndiaNow() {\n  const parts = new Intl.DateTimeFormat(\"en-CA\", {\n    timeZone: \"Asia/Kolkata\",\n    year: \"numeric\",\n    month: \"2-digit\",\n    day: \"2-digit\",\n    hour: \"2-digit\",\n    minute: \"2-digit\",\n    hour12: false\n  }).formatToParts(new Date());\n\n  const data = {};\n  for (const part of parts) {\n    data[part.type] = part.value;\n  }\n\n  return {\n    today: `${data.year}-${data.month}-${data.day}`,\n    currentMinutes: Number(data.hour) * 60 + Number(data.minute)\n  };\n}\n\nfunction toMinutes(time) {\n  const [h, m] = String(time).split(\":\").map(Number);\n  return h * 60 + m;\n}\n\nconst indiaNow = getIndiaNow();\nconst appointmentMinutes = toMinutes(bookingData.appointment_time);\n\nconst slotInPast =\n  bookingData.appointment_date === indiaNow.today &&\n  appointmentMinutes <= indiaNow.currentMinutes;\n\nreturn [\n  {\n    json: {\n      ...bookingData,\n      slot_booked: slotBooked,\n      slot_in_past: slotInPast,\n      slot_valid: !slotBooked && !slotInPast,\n      existing_appointment_id: $json.appointment_id || null,\n      response_message: slotBooked\n        ? \"Sorry, this slot has already been booked. Please choose another available slot.\"\n        : slotInPast\n          ? \"Sorry, this time has already passed today. Please choose a future slot.\"\n          : \"Slot is available.\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -976,
+        -736
+      ],
+      "id": "ffc8e969-f83c-497c-b415-2bc8234d14e6",
+      "name": "Prepare Slot Check Result"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO appointments (\n  patient_id,\n  doctor_id,\n  appointment_date,\n  appointment_start,\n  appointment_end,\n  appointment_type,\n  reason,\n  triage_level,\n  status,\n  booking_source\n)\nVALUES (\n  {{ $json.patient_id }},\n  {{ $json.doctor_id }},\n  '{{ $json.appointment_date }}',\n  '{{ $json.appointment_date }} {{ $json.appointment_time }}:00',\n  DATE_ADD('{{ $json.appointment_date }} {{ $json.appointment_time }}:00', INTERVAL 30 MINUTE),\n  'consultation',\n  '{{ $json.reason }}',\n  'routine',\n  'confirmed',\n  'ai_chatbot'\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        1424,
+        -704
+      ],
+      "id": "7f7dc881-56ad-4a79-a917-ab856eb0daaf",
+      "name": "Save Appointment",
+      "credentials": {
+        "mySql": {
+          "id": "NCxOrgZXhz1Kd8wR",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$node[\"Prepare Appointment Result\"].json[\"email\"]}}",
+        "subject": "Appointment Confirmation - ABC Hospital",
+        "message": "=<p>Hello {{$node[\"Prepare Appointment Result\"].json[\"patient_name\"]}},</p>\n\n<p>Your appointment has been confirmed successfully.</p>\n\n<table cellpadding=\"6\" cellspacing=\"0\" border=\"0\">\n  <tr>\n    <td><strong>Doctor:</strong></td>\n    <td>{{$node[\"Prepare Appointment Result\"].json[\"doctor_name\"]}}</td>\n  </tr>\n\n  <tr>\n    <td><strong>Department:</strong></td>\n    <td>{{$node[\"Prepare Appointment Result\"].json[\"department\"]}}</td>\n  </tr>\n\n  <tr>\n    <td><strong>Date:</strong></td>\n    <td>{{$node[\"Prepare Appointment Result\"].json[\"appointment_date\"]}}</td>\n  </tr>\n\n  <tr>\n    <td><strong>Time:</strong></td>\n    <td>{{$node[\"Prepare Appointment Result\"].json[\"appointment_time\"]}} IST</td>\n  </tr>\n\n  <tr>\n    <td><strong>Reason:</strong></td>\n    <td>{{$node[\"Prepare Appointment Result\"].json[\"reason\"]}}</td>\n  </tr>\n</table>\n\n<p>A confirmation email has been generated for your records.</p>\n\n<p>Thank you,<br><strong>ABC Hospital</strong></p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1984,
+        -704
+      ],
+      "id": "6654bd80-8d9e-4757-84ab-f2f03bca8abb",
+      "name": "Send a message",
+      "webhookId": "d49a3901-99c4-4c08-b0e1-cecce31b5d91",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "exxkoUY7YObMmj4V",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a013602b-aa25-4013-9d5e-843b18ad4feb",
+              "leftValue": "={{$json.slot_valid}}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -832,
+        -736
+      ],
+      "id": "775ce250-e1ee-40c7-9a4e-c96a4888db0f",
+      "name": "slot_validation"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\nconst otp = Math.floor(100000 + Math.random() * 900000).toString();\n\nreturn [\n  {\n    json: {\n      ...data,\n      otp,\n      action_type: data.action_type || data.intent || \"booking\",\n      otp_expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),\n      otp_verified: false,\n      otp_status: \"awaiting_otp\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -256,
+        16
+      ],
+      "id": "fb29c706-efea-4dce-b6fe-f6494534982f",
+      "name": "Generate OTP"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO appointment_otps (\n  action_type,\n  session_id,\n  email,\n  otp_code,\n  patient_id,\n  patient_name,\n  phone,\n  appointment_id,\n  doctor_id,\n  doctor_name,\n  department,\n  appointment_date,\n  appointment_time,\n  new_doctor_id,\n  new_doctor_name,\n  new_appointment_date,\n  new_appointment_time,\n  reason,\n  expires_at,\n  is_verified\n)\nVALUES (\n  '{{ $json.action_type || \"booking\" }}',\n  '{{ $json.sessionId || $json.session_id || \"\" }}',\n  '{{ $json.email }}',\n  '{{ $json.otp }}',\n  {{ $json.patient_id || 'NULL' }},\n  '{{ $json.patient_name || \"\" }}',\n  '{{ $json.phone || \"\" }}',\n  {{ $json.appointment_id || 'NULL' }},\n  {{ $json.doctor_id || 'NULL' }},\n  '{{ $json.doctor_name || \"\" }}',\n  '{{ $json.department || \"\" }}',\n  {{ $json.appointment_date ? \"'\" + $json.appointment_date + \"'\" : \"NULL\" }},\n  {{ $json.appointment_time ? \"'\" + $json.appointment_time + \"'\" : \"NULL\" }},\n  {{ $json.new_doctor_id || 'NULL' }},\n  '{{ $json.new_doctor_name || \"\" }}',\n  {{ $json.new_appointment_date ? \"'\" + $json.new_appointment_date + \"'\" : \"NULL\" }},\n  {{ $json.new_appointment_time ? \"'\" + $json.new_appointment_time + \"'\" : \"NULL\" }},\n  '{{ $json.reason || \"\" }}',\n  DATE_ADD(NOW(), INTERVAL 10 MINUTE),\n  FALSE\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -112,
+        16
+      ],
+      "id": "5df3d780-dbb8-4b9f-b5da-52c9500a0621",
+      "name": "Save OTP Request",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "NCxOrgZXhz1Kd8wR",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$json.email}}",
+        "subject": "={{\n  $json.action_type === \"booking\"\n    ? \"ABC Hospital Appointment Booking OTP\"\n\n    : $json.action_type === \"cancel_appointment\"\n      ? \"ABC Hospital Appointment Cancellation OTP\"\n\n      : $json.action_type === \"reschedule_appointment\"\n        ? \"ABC Hospital Appointment Reschedule OTP\"\n\n        : \"ABC Hospital Appointment Verification OTP\"\n}}",
+        "message": "=<p>Hello {{$json.patient_name}},</p>\n\n<p>\n{{\n  $json.action_type === \"booking\"\n    ? \"Your OTP for appointment booking confirmation is:\"\n    \n    : $json.action_type === \"cancel_appointment\"\n      ? \"Your OTP for appointment cancellation confirmation is:\"\n      \n      : $json.action_type === \"reschedule_appointment\"\n        ? \"Your OTP for appointment rescheduling confirmation is:\"\n        \n        : \"Your OTP for appointment verification is:\"\n}}\n</p>\n\n<h2>{{$json.otp}}</h2>\n\n<p>This OTP is valid for 10 minutes.</p>\n\n<p>\n{{\n  $json.action_type === \"booking\"\n    ? \"Please enter this OTP in the chat to confirm your appointment booking.\"\n\n    : $json.action_type === \"cancel_appointment\"\n      ? \"Please enter this OTP in the chat to confirm your appointment cancellation.\"\n\n      : $json.action_type === \"reschedule_appointment\"\n        ? \"Please enter this OTP in the chat to confirm your appointment rescheduling.\"\n\n        : \"Please enter this OTP in the chat for verification.\"\n}}\n</p>\n\n<p>Thank you,<br><strong>ABC Hospital</strong></p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        16
+      ],
+      "id": "14d0cd3a-52a1-462f-bf4f-10ee55427997",
+      "name": "Send OTP Email",
+      "webhookId": "5d6c6f2f-2f9a-4d0a-ad00-aa4b1f6df04d",
+      "alwaysOutputData": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "exxkoUY7YObMmj4V",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "message": "=I have sent a 6-digit OTP to{{ $('Generate OTP').item.json.email }} . Please enter the OTP here to confirm your appointment.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chat",
+      "typeVersion": 1.3,
+      "position": [
+        400,
+        16
+      ],
+      "id": "1e30102c-5bbf-48c9-9d95-065c2248fe68",
+      "name": "Ask OTP",
+      "webhookId": "85e9bba7-98e4-44bd-9800-2cdea3e788e3",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM appointment_otps\nWHERE session_id = '{{ $json.sessionId || $json.session_id }}'\nAND otp_code = '{{ $json.otp || $json.chatInput || $json.response }}'\nAND is_verified = FALSE\nAND expires_at > NOW()\nORDER BY created_at DESC\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        592,
+        16
+      ],
+      "id": "a9b2c395-e566-4439-99d3-5f9884d6d1cd",
+      "name": "Verify OTP",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "NCxOrgZXhz1Kd8wR",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const otpValid = !!$json.otp_id;\n\nreturn [\n  {\n    json: {\n      ...$json,\n\n      otp_valid: otpValid,\n\n      response_message: otpValid\n        ? \"OTP verified successfully.\"\n        : \"Invalid or expired OTP. Please try again.\",\n\n      otp_action_type: $json.action_type || \"\",\n      otp_verified_at: otpValid\n        ? new Date().toISOString()\n        : null\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        752,
+        16
+      ],
+      "id": "c0fed37b-37b6-44bb-aca1-e926121e8f2a",
+      "name": "Prepare OTP Result"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7415317c-8d62-482a-a927-5532f7f1bf98",
+              "leftValue": "={{ $json.otp_valid }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        896,
+        16
+      ],
+      "id": "5be00b08-5f5c-4ede-9fcf-7bf6a5356399",
+      "name": "OTP Valid?",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "message": "Invalid or expired OTP.\n\nPlease:\n- enter the OTP again\nOR\n- type RESEND to receive a new OTP.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chat",
+      "typeVersion": 1.3,
+      "position": [
+        -128,
+        256
+      ],
+      "id": "e1449cde-d3e2-404a-9d17-4c0d66f528fc",
+      "name": "Invalid OTP Message",
+      "webhookId": "a82d46bd-94cf-4b23-85cb-9a6ee53f6fb1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "96d33f3c-affc-4f42-a6b6-b0e3dc044d77",
+              "leftValue": "={{$json.intent}}",
+              "rightValue": "resend_otp",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        288,
+        256
+      ],
+      "id": "743067ff-d51f-491b-abd0-aac4e5808469",
+      "name": "Check RESEND Request"
+    },
+    {
+      "parameters": {
+        "message": "={{ $json.response_message }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chat",
+      "typeVersion": 1.3,
+      "position": [
+        -1168,
+        128
+      ],
+      "id": "c44f0b37-9066-4e4a-8697-4ab76ff481dd",
+      "name": "Response",
+      "webhookId": "324425f9-f8c5-4673-bf4e-81931260953d"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input =\n  $json.response ||\n  $json.chatInput ||\n  $json.message ||\n  \"\";\n\nconst text = String(input).trim().toLowerCase();\n\nconst otpMatch = text.match(/\\b\\d{6}\\b/);\n\nconst resendRequested =\n  text.includes(\"resend\") ||\n  text.includes(\"send again\") ||\n  text.includes(\"new otp\") ||\n  text.includes(\"resend otp\");\n\nreturn [\n  {\n    json: {\n      ...$json,\n\n      retry_input: input,\n\n      intent: resendRequested\n        ? \"resend_otp\"\n        : otpMatch\n          ? \"verify_otp\"\n          : \"unknown\",\n\n      otp: otpMatch\n        ? otpMatch[0]\n        : \"\",\n\n      resend_requested: resendRequested\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        64,
+        256
+      ],
+      "id": "b4779d15-4f94-43ee-8b01-eda56c14c05d",
+      "name": "Normalize OTP Retry Input"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT *\nFROM appointment_otps\nWHERE session_id = '{{ $json.sessionId }}'\nAND is_verified = FALSE\nORDER BY created_at DESC\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        512,
+        240
+      ],
+      "id": "2ee15517-2447-48ab-b800-18aa5eee943f",
+      "name": "Get Latest OTP Booking Data",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "NCxOrgZXhz1Kd8wR",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Use this tool when the patient asks about hospital information such as hospital timings, address, departments, doctors, fees, emergency services, insurance, documents required, facilities, visiting hours, parking, contact number, or hospital policies.\n\nDo not use this tool for appointment booking, doctor availability, OTP, or slot checking.",
+        "memoryKey": {
+          "__rl": true,
+          "mode": "list",
+          "value": "vector_store_key"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.3,
+      "position": [
+        -2032,
+        144
+      ],
+      "id": "f03c490c-b940-4c3f-afd8-6fde0d91053d",
+      "name": "hospital_information"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -1888,
+        320
+      ],
+      "id": "b1ae3641-4314-437d-b996-7c10c67bb805",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "fqySnAnY9VcorKYQ",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "output": "={{\n  $json.intent === \"booking\" ? 0 :\n  $json.intent === \"cancel_appointment\" ? 1 :\n  $json.intent === \"reschedule_appointment\" ? 2 :\n  3\n}}"
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -1968,
+        -128
+      ],
+      "id": "e269af14-aeee-4736-bec2-390887f34d30",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  a.appointment_id,\n  a.patient_id,\n  a.doctor_id,\n  p.full_name AS patient_name,\n  p.email,\n  d.doctor_name,\n  d.department,\n  a.appointment_date,\n  TIME_FORMAT(a.appointment_start, '%H:%i') AS appointment_time,\n  a.reason,\n  a.status\nFROM appointments a\nJOIN patients p\n  ON p.patient_id = a.patient_id\nJOIN doctors d\n  ON d.doctor_id = a.doctor_id\nWHERE p.email = '{{ $json.email }}'\nAND a.appointment_date = '{{ $json.appointment_date }}'\nAND a.status IN ('scheduled', 'confirmed')\nORDER BY a.appointment_start ASC\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -1456,
+        -464
+      ],
+      "id": "d99e608e-4035-4121-a4ce-de1fae947966",
+      "name": "Find Appointment",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "NCxOrgZXhz1Kd8wR",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const found = !!$json.appointment_id;\n\nreturn [\n  {\n    json: {\n      ...$json,\n      intent: \"cancel_appointment\",\n      action_type: \"cancel_appointment\",\n      appointment_found: found,\n      response_message: found\n        ? \"Appointment found. OTP verification is required for cancellation.\"\n        : \"No active appointment found with the provided details.\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1264,
+        -464
+      ],
+      "id": "9c46a8be-f484-4b01-b352-77e54ed1bce0",
+      "name": "Prepare Cancellation Result"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d790e337-01fd-48ab-bd26-36615cb06ae3",
+              "leftValue": "={{$json.appointment_found}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1024,
+        -464
+      ],
+      "id": "c0b192fe-87e5-4ac7-a37a-4cf9d0bf9281",
+      "name": "Appointment Found?"
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "numberOutputs": 3,
+        "output": "={{\n  $json.action_type === \"booking\" ? 0 :\n  $json.action_type === \"cancel_appointment\" ? 1 :\n  $json.action_type === \"reschedule_appointment\" ? 2 :\n  0\n}}"
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1152,
+        -480
+      ],
+      "id": "2bf71957-4854-4493-afa9-26913d6a8669",
+      "name": "Switch by Action Type"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE appointments\nSET status = 'cancelled'\nWHERE appointment_id = {{ $json.appointment_id }}\nAND status IN ('scheduled', 'confirmed');",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        1408,
+        -464
+      ],
+      "id": "297cf017-10f3-47e3-a9de-cf19679f6582",
+      "name": "Cancel Appointment",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "NCxOrgZXhz1Kd8wR",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const found = !!$json.appointment_id;\n\nreturn [\n  {\n    json: {\n      ...$json,\n      intent: \"cancel_appointment\",\n      action_type: \"cancel_appointment\",\n      appointment_found: found,\n      response_message: found\n        ? \"Appointment found. OTP verification is required for cancellation.\"\n        : \"No active appointment found with the provided details.\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        -464
+      ],
+      "id": "c50b4e9e-9484-4a52-84cc-9812408a6a0a",
+      "name": "Prepare Cancellation Result1"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$node[\"Prepare Cancellation Result\"].json[\"email\"]}}",
+        "subject": "Appointment Cancelled - ABC Hospital",
+        "message": "=<p>Hello {{$node[\"Prepare Cancellation Result\"].json[\"patient_name\"]}},</p>\n\n<p>Your appointment has been cancelled successfully.</p>\n\n<table cellpadding=\"6\" cellspacing=\"0\" border=\"0\">\n  <tr>\n    <td><strong>Doctor:</strong></td>\n    <td>{{$node[\"Prepare Cancellation Result\"].json[\"doctor_name\"]}}</td>\n  </tr>\n\n  <tr>\n    <td><strong>Department:</strong></td>\n    <td>{{$node[\"Prepare Cancellation Result\"].json[\"department\"]}}</td>\n  </tr>\n\n  <tr>\n    <td><strong>Date:</strong></td>\n    <td>{{$node[\"Prepare Cancellation Result\"].json[\"appointment_date\"]}}</td>\n  </tr>\n\n  <tr>\n    <td><strong>Time:</strong></td>\n    <td>{{$node[\"Prepare Cancellation Result\"].json[\"appointment_time\"]}} IST</td>\n  </tr>\n</table>\n\n<p>A cancellation confirmation email has been generated for your records.</p>\n\n<p>Thank you,<br><strong>ABC Hospital</strong></p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1984,
+        -464
+      ],
+      "id": "d9f9db2d-0f2d-48de-bd45-85895113ce8e",
+      "name": "Send a message1",
+      "webhookId": "b6de80ac-9cf8-4208-8099-6d33ab51a673",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "exxkoUY7YObMmj4V",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const otpData = $(\"Generate OTP\").first().json;\n\nreturn [\n  {\n    json: {\n      ...otpData\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        64,
+        16
+      ],
+      "id": "78f24d94-f80a-491a-b7f4-fb752dfc3b5e",
+      "name": "Prepare OTP Email Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "const current = $input.first().json;\nconst triggerData = $(\"When chat message received\").first().json;\n\nconst sessionId =\n  current.sessionId ||\n  current.session_id ||\n  triggerData.sessionId ||\n  \"\";\n\nlet action_type =\n  current.action_type ||\n  current.intent ||\n  \"booking\";\n\nif (action_type === \"cancel_appointment\") {\n  action_type = \"cancel_appointment\";\n} else if (action_type === \"reschedule_appointment\") {\n  action_type = \"reschedule_appointment\";\n} else {\n  action_type = \"booking\";\n}\n\nreturn [\n  {\n    json: {\n      ...current,\n      sessionId,\n      session_id: sessionId,\n      action_type\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -416,
+        16
+      ],
+      "id": "312cf0d2-785d-4dd3-b519-909bf4d68a6f",
+      "name": "Prepare OTP Context"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  a.appointment_id,\n  p.full_name AS patient_name,\n  p.email,\n  d.doctor_name,\n  d.department,\n  a.appointment_date,\n  TIME_FORMAT(a.appointment_start, '%H:%i') AS appointment_time,\n  a.reason,\n  a.status\nFROM appointments a\nJOIN patients p ON p.patient_id = a.patient_id\nJOIN doctors d ON d.doctor_id = a.doctor_id\nWHERE a.appointment_id = {{ $('Prepare OTP Result').item.json.appointment_id }}\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        1616,
+        -464
+      ],
+      "id": "f667f6c1-46b2-4391-abcf-a115fbb2e161",
+      "name": "Verify Cancelled Appointment",
+      "credentials": {
+        "mySql": {
+          "id": "NCxOrgZXhz1Kd8wR",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "Use this tool to fetch a patient's existing active appointments by email. Use it when the patient wants to view, cancel, or reschedule an appointment. The tool can optionally filter by appointment_date or doctor_name. It returns appointment_id, doctor, department, date, time, reason, and status.",
+        "workflowId": {
+          "__rl": true,
+          "value": "q9XczF3wgofRRUDJ",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/q9XczF3wgofRRUDJ",
+          "cachedResultName": "get_patient_appointments"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "email": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('email', ``, 'string') }}",
+            "appointment_date": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('appointment_date', ``, 'string') }}",
+            "doctor_name": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('doctor_name', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "appointment_date",
+              "displayName": "appointment_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "doctor_name",
+              "displayName": "doctor_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        -2576,
+        320
+      ],
+      "id": "5c4ef1d7-e72b-49e7-ad01-7f9077f5354f",
+      "name": "get_patient_appointments"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n    a.appointment_id,\n    a.patient_id,\n    a.doctor_id,\n\n    p.full_name AS patient_name,\n    p.email,\n    p.phone,\n\n    d.doctor_name,\n    d.department,\n\n    a.appointment_date,\n\n    TIME_FORMAT(a.appointment_start, '%H:%i') AS appointment_time,\n\n    a.reason,\n    a.status\n\nFROM appointments a\n\nJOIN patients p\nON p.patient_id = a.patient_id\n\nJOIN doctors d\nON d.doctor_id = a.doctor_id\n\nWHERE p.email = '{{ $json.email }}'\n\nAND (\n    d.doctor_name = '{{ $json.doctor_name }}'\n    OR d.department = '{{ $json.department }}'\n)\n\nAND a.status IN ('scheduled', 'confirmed')\n\nORDER BY a.appointment_date ASC\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -1584,
+        -176
+      ],
+      "id": "b764c81b-b329-40b8-bc25-a07e5945f7c1",
+      "name": "Find Existing Appointment",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "NCxOrgZXhz1Kd8wR",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const found = !!$json.appointment_id;\nconst request = $('Switch').first().json;\n\nreturn [\n  {\n    json: {\n      ...$json,\n\n      intent: \"reschedule_appointment\",\n      action_type: \"reschedule_appointment\",\n\n      appointment_found: found,\n\n      new_doctor_id: request.new_doctor_id || $json.doctor_id,\n      new_doctor_name: request.new_doctor_name || $json.doctor_name,\n      new_appointment_date: request.new_appointment_date || $json.appointment_date,\n      new_appointment_time: request.new_appointment_time || $json.appointment_time,\n\n      response_message: found\n        ? \"Appointment found. Checking new slot availability.\"\n        : \"No active appointment found.\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1440,
+        -176
+      ],
+      "id": "cf5edaaf-e0e4-4ebb-b99d-b78d802bc7d0",
+      "name": "Prepare Reschedule Context"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\nreturn [\n  {\n    json: {\n      ...data,\n      new_doctor_id: data.new_doctor_id || data.doctor_id,\n      new_doctor_name: data.new_doctor_name || data.doctor_name,\n      new_appointment_date: data.new_appointment_date || data.appointment_date,\n      new_appointment_time: data.new_appointment_time || data.appointment_time\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1264,
+        -176
+      ],
+      "id": "1351167e-7162-4826-8fb3-104b5547c634",
+      "name": "Normalize Reschedule Data"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT appointment_id\nFROM appointments\nWHERE doctor_id = {{ $json.new_doctor_id }}\nAND appointment_start = '{{ $json.new_appointment_date }} {{ $json.new_appointment_time }}:00'\nAND status IN ('scheduled', 'confirmed', 'checked_in')\nAND appointment_id != {{ $json.appointment_id }}\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -1104,
+        -176
+      ],
+      "id": "1cedde2a-46d8-4d82-97e4-d32041b3ba63",
+      "name": "Check New Slot Availability",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "NCxOrgZXhz1Kd8wR",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data =\n  $('Normalize Reschedule Data').first().json;\n\nconst slotBooked =\n  !!$json.appointment_id;\n\nreturn [\n  {\n    json: {\n\n      ...data,\n\n      new_slot_booked: slotBooked,\n\n      new_slot_valid: !slotBooked,\n\n      response_message: slotBooked\n        ? \"Selected slot is already booked.\"\n        : \"New slot is available. OTP verification required.\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -944,
+        -176
+      ],
+      "id": "e6faeaf4-305b-400d-aa42-d0a54db99a61",
+      "name": "Prepare New Slot Result"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ce8d64d3-a46b-4235-a2a8-31c88fe7ea8f",
+              "leftValue": "={{$json.new_slot_valid}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -784,
+        -176
+      ],
+      "id": "a64d444d-ea01-47ba-b0ff-8735a39c17a3",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE appointments\n\nSET\n\ndoctor_id =\n{{ $json.new_doctor_id }},\n\nappointment_date =\n'{{ $json.new_appointment_date }}',\n\nappointment_start =\n'{{ $json.new_appointment_date }} {{ $json.new_appointment_time }}:00',\n\nappointment_end =\nDATE_ADD(\n'{{ $json.new_appointment_date }} {{ $json.new_appointment_time }}:00',\nINTERVAL 30 MINUTE\n),\n\nstatus = 'confirmed'\n\nWHERE appointment_id =\n{{ $json.appointment_id }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        1408,
+        -224
+      ],
+      "id": "f116b50b-718d-4a87-b1e0-16a17165de5e",
+      "name": "Reschedule Appointment",
+      "credentials": {
+        "mySql": {
+          "id": "NCxOrgZXhz1Kd8wR",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n    a.appointment_id,\n\n    p.full_name AS patient_name,\n    p.email,\n    p.phone,\n\n    d.doctor_name,\n    d.department,\n\n    a.appointment_date,\n\n    TIME_FORMAT(a.appointment_start, '%H:%i') AS appointment_time,\n\n    TIME_FORMAT(a.appointment_end, '%H:%i') AS appointment_end_time,\n\n    a.reason,\n    a.status\n\nFROM appointments a\n\nJOIN patients p\nON p.patient_id = a.patient_id\n\nJOIN doctors d\nON d.doctor_id = a.doctor_id\n\nWHERE a.appointment_id =\n{{ $('Prepare OTP Result').item.json.appointment_id }}\n\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        1616,
+        -224
+      ],
+      "id": "3dd293f0-a872-4f83-84b3-aaa1e92d4fb2",
+      "name": "Verify Rescheduled Appointment",
+      "credentials": {
+        "mySql": {
+          "id": "NCxOrgZXhz1Kd8wR",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$node[\"Prepare Reschedule Result\"].json[\"email\"]}}",
+        "subject": "Appointment Rescheduled - ABC Hospital",
+        "message": "=<p>Hello {{$node[\"Prepare Reschedule Result\"].json[\"patient_name\"]}},</p>\n\n<p>Your appointment has been rescheduled successfully.</p>\n\n<table cellpadding=\"6\" cellspacing=\"0\" border=\"0\">\n\n  <tr>\n    <td><strong>Doctor:</strong></td>\n    <td>{{$node[\"Prepare Reschedule Result\"].json[\"doctor_name\"]}}</td>\n  </tr>\n\n  <tr>\n    <td><strong>Department:</strong></td>\n    <td>{{$node[\"Prepare Reschedule Result\"].json[\"department\"]}}</td>\n  </tr>\n\n  <tr>\n    <td><strong>New Date:</strong></td>\n    <td>{{$node[\"Prepare Reschedule Result\"].json[\"appointment_date\"]}}</td>\n  </tr>\n\n  <tr>\n    <td><strong>New Time:</strong></td>\n    <td>{{$node[\"Prepare Reschedule Result\"].json[\"appointment_time\"]}} IST</td>\n  </tr>\n\n  <tr>\n    <td><strong>Reason:</strong></td>\n    <td>{{$node[\"Prepare Reschedule Result\"].json[\"reason\"]}}</td>\n  </tr>\n\n</table>\n\n<p>A reschedule confirmation email has been generated for your records.</p>\n\n<p>Thank you,<br><strong>ABC Hospital</strong></p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1984,
+        -224
+      ],
+      "id": "183ee7a1-f63f-4849-ae7c-a0803e5b34f4",
+      "name": "Send a message2",
+      "webhookId": "87c01ea1-0fa3-41f8-b206-e230de1af547",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "exxkoUY7YObMmj4V",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  a.appointment_id,\n  p.full_name AS patient_name,\n  p.email,\n  p.phone,\n  d.doctor_name,\n  d.department,\n  a.appointment_date,\n  TIME_FORMAT(a.appointment_start, '%H:%i') AS appointment_time,\n  TIME_FORMAT(a.appointment_end, '%H:%i') AS appointment_end_time,\n  a.reason,\n  a.status\nFROM appointments a\nJOIN patients p ON p.patient_id = a.patient_id\nJOIN doctors d ON d.doctor_id = a.doctor_id\nWHERE a.patient_id = {{ $('Switch by Action Type').item.json.patient_id }}\nAND a.doctor_id = {{ $('Switch by Action Type').item.json.doctor_id }}\nAND a.appointment_start = '{{ $('Switch by Action Type').item.json.appointment_date }} {{ $('Switch by Action Type').item.json.appointment_time }}:00'\nAND a.status = 'confirmed'\nORDER BY a.appointment_id DESC\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        1632,
+        -704
+      ],
+      "id": "b2865702-09f1-4633-9911-f229e406a07b",
+      "name": "Verify Appointment",
+      "credentials": {
+        "mySql": {
+          "id": "NCxOrgZXhz1Kd8wR",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\nreturn [\n  {\n    json: {\n\n      booking_successful: true,\n\n      appointment_id: data.appointment_id,\n\n      patient_name: data.patient_name,\n\n      email: data.email,\n\n      phone: data.phone || \"\",\n\n      doctor_name: data.doctor_name,\n\n      department: data.department,\n\n      appointment_date: data.appointment_date,\n\n      appointment_time: data.appointment_time,\n\n      appointment_end_time:\n        data.appointment_end_time || \"\",\n\n      reason: data.reason,\n\n      status: data.status,\n\n      response_message:\n        \"Appointment booked successfully.\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        -704
+      ],
+      "id": "c3f08ee5-009e-46a2-b03e-f636054f37da",
+      "name": "Prepare Appointment Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\nreturn [\n  {\n    json: {\n\n      reschedule_successful: true,\n\n      appointment_id: data.appointment_id,\n\n      patient_name: data.patient_name,\n\n      email: data.email,\n\n      phone: data.phone || \"\",\n\n      doctor_name: data.doctor_name,\n\n      department: data.department,\n\n      appointment_date: data.appointment_date,\n\n      appointment_time: data.appointment_time,\n\n      appointment_end_time:\n        data.appointment_end_time || \"\",\n\n      reason: data.reason,\n\n      status: data.status,\n\n      response_message:\n        \"Appointment rescheduled successfully.\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        -224
+      ],
+      "id": "847a78de-e9c3-442b-a8fb-cfd7112f5c08",
+      "name": "Prepare Reschedule Result"
+    },
+    {
+      "parameters": {
+        "message": "=Your appointment with {{ $('Prepare Cancellation Result1').item.json.doctor_name }} on {{ $('Prepare Cancellation Result1').item.json.appointment_date }} at {{ $('Prepare Cancellation Result1').item.json.appointment_time }} has been {{ $('Prepare Cancellation Result1').item.json.status }} successfully.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chat",
+      "typeVersion": 1.3,
+      "position": [
+        2192,
+        -464
+      ],
+      "id": "c0e7d24e-8681-4d6d-ae2a-934f7af0ecc1",
+      "name": "Cancel Confirmation Response",
+      "webhookId": "ab875616-446b-4322-9f40-a582e8d7f3df"
+    },
+    {
+      "parameters": {
+        "message": "=Your appointment has been rescheduled successfully.\n\nUpdated Appointment Details:\n\nPatient Name:\n{{$node[\"Prepare Reschedule Result\"].json[\"patient_name\"]}}\n\nDoctor:\n{{$node[\"Prepare Reschedule Result\"].json[\"doctor_name\"]}}\n\nDepartment:\n{{$node[\"Prepare Reschedule Result\"].json[\"department\"]}}\n\nDate:\n{{$node[\"Prepare Reschedule Result\"].json[\"appointment_date\"]}}\n\nTime:\n{{$node[\"Prepare Reschedule Result\"].json[\"appointment_time\"]}} IST\n\nA confirmation email has been sent to {{$node[\"Prepare Reschedule Result\"].json[\"email\"]}}.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chat",
+      "typeVersion": 1.3,
+      "position": [
+        2192,
+        -224
+      ],
+      "id": "f6592874-d9c8-4b51-a2bb-f15b8905a7c3",
+      "name": "Reschedule Confirmation Response",
+      "webhookId": "ab875616-446b-4322-9f40-a582e8d7f3df"
+    },
+    {
+      "parameters": {
+        "message": "=Your appointment has been confirmed successfully.\n\nAppointment Details:\n\nPatient Name: {{$node[\"Prepare Appointment Result\"].json[\"patient_name\"]}}\n\nEmail: {{$node[\"Prepare Appointment Result\"].json[\"email\"]}}\n\nDate: {{$node[\"Prepare Appointment Result\"].json[\"appointment_date\"]}}\n\nTime: {{$node[\"Prepare Appointment Result\"].json[\"appointment_time\"]}} IST\n\nReason: {{$node[\"Prepare Appointment Result\"].json[\"reason\"]}}\n\nA confirmation email has been sent to {{$node[\"Prepare Appointment Result\"].json[\"email\"]}}.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chat",
+      "typeVersion": 1.3,
+      "position": [
+        2176,
+        -704
+      ],
+      "id": "8e3c2ecd-7081-4269-b845-853829fba158",
+      "name": "Appointment Confirmation Response",
+      "webhookId": "8b4f67fa-07f1-40a4-96bd-423fcadeb275"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Add Current Date Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Current Date Context": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "find_doctors_by_department": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_doctor_availability": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_available_slots": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Or Reuse Patient": {
+      "main": [
+        [
+          {
+            "node": "Get Patient ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Patient ID": {
+      "main": [
+        [
+          {
+            "node": "Prepare Final Booking Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Final Booking Data": {
+      "main": [
+        [
+          {
+            "node": "Check Slot Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Slot Availability": {
+      "main": [
+        [
+          {
+            "node": "Prepare Slot Check Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Slot Check Result": {
+      "main": [
+        [
+          {
+            "node": "slot_validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Appointment": {
+      "main": [
+        [
+          {
+            "node": "Verify Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Appointment Confirmation Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "slot_validation": {
+      "main": [
+        [
+          {
+            "node": "Prepare OTP Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate OTP": {
+      "main": [
+        [
+          {
+            "node": "Save OTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save OTP Request": {
+      "main": [
+        [
+          {
+            "node": "Prepare OTP Email Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send OTP Email": {
+      "main": [
+        [
+          {
+            "node": "Ask OTP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask OTP": {
+      "main": [
+        [
+          {
+            "node": "Verify OTP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify OTP": {
+      "main": [
+        [
+          {
+            "node": "Prepare OTP Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare OTP Result": {
+      "main": [
+        [
+          {
+            "node": "OTP Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OTP Valid?": {
+      "main": [
+        [
+          {
+            "node": "Switch by Action Type",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Invalid OTP Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invalid OTP Message": {
+      "main": [
+        [
+          {
+            "node": "Normalize OTP Retry Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check RESEND Request": {
+      "main": [
+        [
+          {
+            "node": "Get Latest OTP Booking Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Verify OTP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize OTP Retry Input": {
+      "main": [
+        [
+          {
+            "node": "Check RESEND Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Latest OTP Booking Data": {
+      "main": [
+        [
+          {
+            "node": "Prepare OTP Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "hospital_information": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "hospital_information",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Create Or Reuse Patient",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Find Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Find Existing Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Appointment": {
+      "main": [
+        [
+          {
+            "node": "Prepare Cancellation Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Cancellation Result": {
+      "main": [
+        [
+          {
+            "node": "Appointment Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Appointment Found?": {
+      "main": [
+        [
+          {
+            "node": "Prepare OTP Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch by Action Type": {
+      "main": [
+        [
+          {
+            "node": "Save Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Cancel Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reschedule Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancel Appointment": {
+      "main": [
+        [
+          {
+            "node": "Verify Cancelled Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Cancellation Result1": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message1": {
+      "main": [
+        [
+          {
+            "node": "Cancel Confirmation Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare OTP Email Data": {
+      "main": [
+        [
+          {
+            "node": "Send OTP Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare OTP Context": {
+      "main": [
+        [
+          {
+            "node": "Generate OTP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Cancelled Appointment": {
+      "main": [
+        [
+          {
+            "node": "Prepare Cancellation Result1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_patient_appointments": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Existing Appointment": {
+      "main": [
+        [
+          {
+            "node": "Prepare Reschedule Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Reschedule Context": {
+      "main": [
+        [
+          {
+            "node": "Normalize Reschedule Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Reschedule Data": {
+      "main": [
+        [
+          {
+            "node": "Check New Slot Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check New Slot Availability": {
+      "main": [
+        [
+          {
+            "node": "Prepare New Slot Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare New Slot Result": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Prepare OTP Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reschedule Appointment": {
+      "main": [
+        [
+          {
+            "node": "Verify Rescheduled Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Rescheduled Appointment": {
+      "main": [
+        [
+          {
+            "node": "Prepare Reschedule Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message2": {
+      "main": [
+        [
+          {
+            "node": "Reschedule Confirmation Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Appointment": {
+      "main": [
+        [
+          {
+            "node": "Prepare Appointment Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Appointment Result": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Reschedule Result": {
+      "main": [
+        [
+          {
+            "node": "Send a message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "c3d63d60-5b7a-4e09-a831-0351eabb9599",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0595145c7d9587a1b1a71e4f98980d5caead4ceedff79f4aa219fadefa3500e9"
+  },
+  "id": "N7yitbdr50M2migf",
+  "tags": []
+}

@@ -1,0 +1,195 @@
+{
+  "name": "get_available_slots",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "doctor_id",
+              "type": "number"
+            },
+            {
+              "name": "appointment_date"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -288,
+        64
+      ],
+      "id": "46a57cdc-ab9b-4279-923e-b93d9da1a884",
+      "name": "When Executed by Another Workflow",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const doctor_id = Number($json.doctor_id);\nconst appointment_date = String($json.appointment_date || \"\").trim();\n\nif (!doctor_id || !appointment_date) {\n  return [\n    {\n      json: {\n        valid: false,\n        error: \"doctor_id and appointment_date are required.\"\n      }\n    }\n  ];\n}\n\nconst match = appointment_date.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);\n\nif (!match) {\n  return [\n    {\n      json: {\n        valid: false,\n        error: \"Invalid appointment_date format. Use YYYY-MM-DD.\"\n      }\n    }\n  ];\n}\n\nconst [_, year, month, day] = match.map(Number);\n\n// Use UTC to avoid timezone shifting issue\nconst date = new Date(Date.UTC(year, month - 1, day));\n\nconst days = [\n  \"sunday\",\n  \"monday\",\n  \"tuesday\",\n  \"wednesday\",\n  \"thursday\",\n  \"friday\",\n  \"saturday\"\n];\n\nconst day_of_week = days[date.getUTCDay()];\n\nreturn [\n  {\n    json: {\n      valid: true,\n      doctor_id,\n      appointment_date,\n      day_of_week\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        64
+      ],
+      "id": "9c207096-d0dd-4865-a4ee-6f5aa7d11a2f",
+      "name": "Prepare Slot Request Input",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  d.doctor_id,\n  d.doctor_name,\n  d.department,\n  d.specialization,\n  d.consultation_duration,\n  d.available_from,\n  d.available_to,\n  ds.day_of_week,\n  ds.start_time,\n  ds.end_time,\n  ds.is_available\nFROM doctors d\nLEFT JOIN doctor_schedule ds\n  ON d.doctor_id = ds.doctor_id\n  AND ds.day_of_week = '{{ $('Prepare Slot Request Input').item.json.day_of_week }}'\nWHERE d.doctor_id = {{ $('Prepare Slot Request Input').item.json.doctor_id }}\nAND d.is_active = TRUE\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        288,
+        64
+      ],
+      "id": "1b3d0703-3790-4396-b146-45385860241d",
+      "name": "Get Doctor Details",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "NCxOrgZXhz1Kd8wR",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const doctor = $(\"Get Doctor Details\").first().json;\n\n// Booked appointments come from Get Booked Appointments\nconst bookedAppointments = $(\"Get Booked Appointments\").all().map(item => item.json);\n\n// Doctor unavailable slots come from Get Doctor Unavailability\nconst unavailableRows = $(\"Get Doctor Unavailability\").all().map(item => item.json);\n\nconst slotInput = $(\"Prepare Slot Request Input\").first().json;\nconst appointment_date = slotInput.appointment_date;\n\nif (!doctor || !doctor.doctor_id) {\n  return [\n    {\n      json: {\n        available: false,\n        doctor_id: slotInput.doctor_id,\n        appointment_date,\n        slots: [],\n        message: \"Doctor not found or inactive.\"\n      }\n    }\n  ];\n}\n\nif (!doctor.day_of_week || doctor.is_available === 0 || doctor.is_available === false) {\n  return [\n    {\n      json: {\n        available: false,\n        doctor_id: doctor.doctor_id,\n        doctor_name: doctor.doctor_name,\n        department: doctor.department,\n        appointment_date,\n        slots: [],\n        message: `${doctor.doctor_name} is not available on this date.`\n      }\n    }\n  ];\n}\n\nfunction toMinutes(time) {\n  const [h, m] = String(time).slice(0, 5).split(\":\").map(Number);\n  return h * 60 + m;\n}\n\nfunction toTimeString(minutes) {\n  const h = Math.floor(minutes / 60);\n  const m = minutes % 60;\n  return `${String(h).padStart(2, \"0\")}:${String(m).padStart(2, \"0\")}:00`;\n}\n\nfunction toAmPm(time) {\n  const [h, m] = String(time).slice(0, 5).split(\":\").map(Number);\n  const suffix = h >= 12 ? \"PM\" : \"AM\";\n  const hour12 = h % 12 || 12;\n  return `${hour12}:${String(m).padStart(2, \"0\")} ${suffix}`;\n}\n\nfunction getIndiaDateTimeParts() {\n  const parts = new Intl.DateTimeFormat(\"en-CA\", {\n    timeZone: \"Asia/Kolkata\",\n    year: \"numeric\",\n    month: \"2-digit\",\n    day: \"2-digit\",\n    hour: \"2-digit\",\n    minute: \"2-digit\",\n    hour12: false\n  }).formatToParts(new Date());\n\n  const data = {};\n  for (const part of parts) {\n    data[part.type] = part.value;\n  }\n\n  return {\n    today: `${data.year}-${data.month}-${data.day}`,\n    currentMinutes: Number(data.hour) * 60 + Number(data.minute)\n  };\n}\n\nconst startTime = doctor.start_time || doctor.available_from;\nconst endTime = doctor.end_time || doctor.available_to;\nconst duration = Number(doctor.consultation_duration || 30);\n\nconst booked = bookedAppointments\n  .filter(a => a.booked_start && a.booked_end)\n  .map(a => ({\n    start: String(a.booked_start).slice(0, 8),\n    end: String(a.booked_end).slice(0, 8)\n  }));\n\nconst unavailable = unavailableRows\n  .filter(u => u.start_time && u.end_time)\n  .map(u => ({\n    start: String(u.start_time).slice(0, 8),\n    end: String(u.end_time).slice(0, 8),\n    reason: u.reason || \"Doctor unavailable\"\n  }));\n\nconst indiaNow = getIndiaDateTimeParts();\n\nconst availableSlots = [];\n\nlet current = toMinutes(startTime);\nconst end = toMinutes(endTime);\n\nwhile (current + duration <= end) {\n  const slotStart = toTimeString(current);\n  const slotEnd = toTimeString(current + duration);\n\n  const isBooked = booked.some(b => {\n    return slotStart < b.end && slotEnd > b.start;\n  });\n\n  const isUnavailable = unavailable.some(u => {\n    return slotStart < u.end && slotEnd > u.start;\n  });\n\n  const isPastTodaySlot =\n    appointment_date === indiaNow.today &&\n    current < indiaNow.currentMinutes + 10;\n\n  if (!isBooked && !isUnavailable && !isPastTodaySlot) {\n    availableSlots.push({\n      start_time: slotStart,\n      end_time: slotEnd,\n      display_time: toAmPm(slotStart)\n    });\n  }\n\n  current += duration;\n}\n\nlet message = \"\";\n\nif (availableSlots.length > 0) {\n  message = `Available slots found for ${doctor.doctor_name}.`;\n} else if (unavailable.length > 0) {\n  message = `${doctor.doctor_name} has no available slots on this date due to unavailability.`;\n} else {\n  message = `No available slots found for ${doctor.doctor_name} on this date.`;\n}\n\nreturn [\n  {\n    json: {\n      available: availableSlots.length > 0,\n      doctor_id: doctor.doctor_id,\n      doctor_name: doctor.doctor_name,\n      department: doctor.department,\n      specialization: doctor.specialization,\n      appointment_date,\n      consultation_duration: duration,\n      available_from: startTime,\n      available_to: endTime,\n      unavailable_periods: unavailable,\n      total_slots: availableSlots.length,\n      slots: availableSlots,\n      message\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        64
+      ],
+      "id": "6e8b199b-2763-496b-b9ba-6d17e8956e2e",
+      "name": "Generate Available Slots",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  appointment_id,\n  TIME(appointment_start) AS booked_start,\n  TIME(appointment_end) AS booked_end,\n  status\nFROM appointments\nWHERE doctor_id = {{ $('Prepare Slot Request Input').item.json.doctor_id }}\nAND appointment_date = '{{ $('Prepare Slot Request Input').item.json.appointment_date }}'\nAND status IN ('scheduled', 'confirmed', 'checked_in')\nORDER BY appointment_start ASC;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        512,
+        64
+      ],
+      "id": "63232dff-4d65-4e4e-92ed-0e2675cf859b",
+      "name": "Get Booked Appointments",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "NCxOrgZXhz1Kd8wR",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  unavailable_id,\n  doctor_id,\n  unavailable_date,\n  TIME_FORMAT(start_time, '%H:%i') AS start_time,\n  TIME_FORMAT(end_time, '%H:%i') AS end_time,\n  reason\nFROM doctor_unavailability\nWHERE doctor_id = {{ $('Prepare Slot Request Input').item.json.doctor_id }}\nAND unavailable_date = '{{ $('Prepare Slot Request Input').item.json.appointment_date }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        720,
+        64
+      ],
+      "id": "aa283045-57e3-46fd-b734-548c2669f57e",
+      "name": "Get Doctor Unavailability",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "NCxOrgZXhz1Kd8wR",
+          "name": "MySQL account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Prepare Slot Request Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Slot Request Input": {
+      "main": [
+        [
+          {
+            "node": "Get Doctor Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Doctor Details": {
+      "main": [
+        [
+          {
+            "node": "Get Booked Appointments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Booked Appointments": {
+      "main": [
+        [
+          {
+            "node": "Get Doctor Unavailability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Doctor Unavailability": {
+      "main": [
+        [
+          {
+            "node": "Generate Available Slots",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "7e99f5ba-6d87-41e3-bfa2-a10b7c60c617",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0595145c7d9587a1b1a71e4f98980d5caead4ceedff79f4aa219fadefa3500e9"
+  },
+  "id": "oZpLd6KdcyNBmdjS",
+  "tags": []
+}

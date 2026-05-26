@@ -1,0 +1,127 @@
+{
+  "name": "find_doctors_by_department",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "department"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -512,
+        -16
+      ],
+      "id": "6a5f674c-db1f-4916-86b3-6fb20a8f9443",
+      "name": "When Executed by Another Workflow",
+      "retryOnFail": true,
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $json.department || \"\";\nconst value = input.toLowerCase().trim();\n\nlet department = input;\n\nconst mappings = [\n  { keywords: [\"ortho\", \"orthopedic\", \"orthopedics\", \"bone\", \"joint\", \"fracture\", \"knee\", \"back pain\"], department: \"Orthopedics\" },\n  { keywords: [\"child\", \"children\", \"baby\", \"kid\", \"kids\", \"pediatric\", \"pediatrics\"], department: \"Pediatrics\" },\n  { keywords: [\"skin\", \"rash\", \"acne\", \"allergy\", \"itching\"], department: \"Dermatology\" },\n  { keywords: [\"heart\", \"cardio\", \"chest pain\", \"bp\", \"blood pressure\"], department: \"Cardiology\" },\n  { keywords: [\"eye\", \"vision\", \"blurry\", \"ophthalmology\"], department: \"Ophthalmology\" },\n  { keywords: [\"tooth\", \"teeth\", \"dental\", \"dentist\"], department: \"Dentistry\" },\n  { keywords: [\"fever\", \"cold\", \"cough\", \"weakness\", \"general\", \"checkup\"], department: \"General Medicine\" }\n];\n\nfor (const item of mappings) {\n  if (item.keywords.some(keyword => value.includes(keyword))) {\n    department = item.department;\n    break;\n  }\n}\n\nreturn [\n  {\n    json: {\n      original_input: input,\n      department\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        -16
+      ],
+      "id": "281ceafe-7121-44ec-976f-aba01c195209",
+      "name": "Code in JavaScript",
+      "alwaysOutputData": true,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  doctor_id,\n  doctor_name,\n  specialization,\n  department,\n  consultation_duration,\n  available_from,\n  available_to\nFROM doctors\nWHERE is_active = TRUE\nAND (\n  department LIKE CONCAT('%', '{{ $json.department }}', '%')\n  OR specialization LIKE CONCAT('%', '{{ $json.department }}', '%')\n)\nORDER BY doctor_name ASC;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        16,
+        -16
+      ],
+      "id": "8aa67aa0-01ab-4692-b852-8d56babbd011",
+      "name": "Find Doctors MySQL",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "NCxOrgZXhz1Kd8wR",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const doctors = items.map(item => item.json);\n\nif (doctors.length === 0) {\n  return [\n    {\n      json: {\n        found: false,\n        count: 0,\n        department: \"\",\n        doctors: [],\n        message: \"No active doctors found.\"\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      found: true,\n      count: doctors.length,\n      department: doctors[0].department,\n      doctors: doctors.map(d => ({\n        doctor_id: d.doctor_id,\n        doctor_name: d.doctor_name,\n        specialization: d.specialization,\n        department: d.department,\n        consultation_duration: d.consultation_duration,\n        available_from: d.available_from,\n        available_to: d.available_to\n      })),\n      message: `${doctors.length} doctor(s) found in ${doctors[0].department}.`\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        -16
+      ],
+      "id": "33adadb5-9ad9-422d-be41-4ed63bf3d6c9",
+      "name": "Code in JavaScript1",
+      "alwaysOutputData": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Find Doctors MySQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Doctors MySQL": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "d86d73db-360f-4fe0-b74a-f4cfc44b2394",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0595145c7d9587a1b1a71e4f98980d5caead4ceedff79f4aa219fadefa3500e9"
+  },
+  "id": "kx8AexL0XuKSVJNm",
+  "tags": []
+}

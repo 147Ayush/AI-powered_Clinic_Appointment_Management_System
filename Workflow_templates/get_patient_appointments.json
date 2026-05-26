@@ -1,0 +1,126 @@
+{
+  "name": "get_patient_appointments",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "email"
+            },
+            {
+              "name": "appointment_date"
+            },
+            {
+              "name": "doctor_name"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -576,
+        0
+      ],
+      "id": "868c452e-396e-4b8d-949f-320853e41719",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "const email = String($json.email || \"\").trim();\nconst appointment_date = String($json.appointment_date || \"\").trim();\nconst doctor_name = String($json.doctor_name || \"\").trim();\n\nif (!email) {\n  return [\n    {\n      json: {\n        valid: false,\n        error: \"Email is required to fetch appointment details.\"\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      valid: true,\n      email,\n      appointment_date,\n      doctor_name\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -288,
+        0
+      ],
+      "id": "3c650d9d-35e6-4b3c-9cb1-2e0946d25b56",
+      "name": "Prepare Patient Appointment Input"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  a.appointment_id,\n  a.patient_id,\n  p.full_name AS patient_name,\n  p.email,\n  p.phone,\n\n  d.doctor_id,\n  d.doctor_name,\n  d.department,\n  d.specialization,\n  d.consultation_duration,\n\n  a.appointment_date,\n  a.appointment_start,\n  a.appointment_end,\n  TIME_FORMAT(a.appointment_start, '%H:%i') AS appointment_time,\n  TIME_FORMAT(a.appointment_end, '%H:%i') AS appointment_end_time,\n\n  a.appointment_type,\n  a.reason,\n  a.triage_level,\n  a.status,\n  a.booking_source,\n  a.created_at\n\nFROM appointments a\nJOIN patients p ON p.patient_id = a.patient_id\nJOIN doctors d ON d.doctor_id = a.doctor_id\n\nWHERE p.email = '{{ $json.email }}'\nAND a.status IN ('scheduled', 'confirmed')\n\nORDER BY a.appointment_date ASC, a.appointment_start ASC;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -64,
+        0
+      ],
+      "id": "e3865566-97ab-4c84-a5a6-04562121ce53",
+      "name": "Find Patient Appointments",
+      "alwaysOutputData": true,
+      "credentials": {
+        "mySql": {
+          "id": "NCxOrgZXhz1Kd8wR",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const appointments = items\n  .map(item => item.json)\n  .filter(appt => appt.appointment_id);\n\nif (appointments.length === 0) {\n  return [\n    {\n      json: {\n        found: false,\n        total_appointments: 0,\n        appointments: [],\n        response_message: \"No active appointments found for this email.\"\n      }\n    }\n  ];\n}\n\nconst formattedAppointments = appointments.map(appt => ({\n  appointment_id: appt.appointment_id,\n  patient_id: appt.patient_id,\n  patient_name: appt.patient_name,\n  email: appt.email,\n  phone: appt.phone || \"\",\n\n  doctor_id: appt.doctor_id,\n  doctor_name: appt.doctor_name,\n  department: appt.department,\n  specialization: appt.specialization || \"\",\n  consultation_duration: appt.consultation_duration,\n\n  appointment_date: appt.appointment_date,\n  appointment_start: appt.appointment_start,\n  appointment_end: appt.appointment_end,\n  appointment_time: appt.appointment_time,\n  appointment_end_time: appt.appointment_end_time,\n\n  appointment_type: appt.appointment_type,\n  reason: appt.reason,\n  triage_level: appt.triage_level,\n  status: appt.status,\n  booking_source: appt.booking_source,\n  created_at: appt.created_at\n}));\n\nconst latest = formattedAppointments[0];\n\nreturn [\n  {\n    json: {\n      found: true,\n      total_appointments: formattedAppointments.length,\n      appointments: formattedAppointments,\n      latest_appointment: latest,\n\n      ...latest,\n\n      response_message: `${formattedAppointments.length} active appointment(s) found.`\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        128,
+        0
+      ],
+      "id": "5b0dc7b8-20ca-4e13-909c-00e314d3e0e6",
+      "name": "Format Appointment Result"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Prepare Patient Appointment Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Patient Appointment Input": {
+      "main": [
+        [
+          {
+            "node": "Find Patient Appointments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Patient Appointments": {
+      "main": [
+        [
+          {
+            "node": "Format Appointment Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "f96b09c2-49b8-42fb-8d73-38d71fad7f45",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0595145c7d9587a1b1a71e4f98980d5caead4ceedff79f4aa219fadefa3500e9"
+  },
+  "id": "q9XczF3wgofRRUDJ",
+  "tags": []
+}
